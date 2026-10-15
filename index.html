@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+    <title>实验动物房管理系统</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#165DFF',
+                        secondary: '#36CFC9',
+                        danger: '#F53F3F',
+                        neutral: '#86909C',
+                        lightbg: '#F2F3F5'
+                    },
+                    fontFamily: {
+                        sans: ['system-ui', 'PingFang SC', 'Microsoft YaHei', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        html{
+            -webkit-tap-highlight-color: transparent;
+        }
+        .module-card {
+            transition: all 0.22s ease;
+        }
+        .module-card:active {
+            transform: scale(0.97);
+        }
+        @media(min-width:768px){
+            .module-card:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 8px 20px rgba(22, 93, 255, 0.15);
+            }
+        }
+        .custom-checkbox-item {
+            display:flex;
+            align-items:center;
+            gap:10px;
+            margin:8px 0;
+        }
+        .custom-checkbox-item input[type="checkbox"]{
+            width:24px;
+            height:24px;
+        }
+        input,textarea{
+            font-size:16px !important;
+        }
+        .modal-mask{
+            position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9999;display:flex;align-items:center;justify-content:center;padding:12px;
+        }
+        .modal-box{
+            background:#fff;border-radius:12px;width:100%;max-height:88vh;overflow-y:auto;padding:18px;
+        }
+    </style>
+</head>
+<body class="bg-lightbg min-h-screen p-3">
+    <div class="max-w-6xl mx-auto">
+        <div class="text-center mb-6">
+            <h1 class="text-xl font-bold text-primary">
+                <i class="fa fa-building-o mr-1"></i>实验动物房管理系统
+            </h1>
+            <p class="text-neutral mt-2 text-sm">动物接收 · 人员进出 · 房间使用 · 台账登记</p>
+        </div>
+        <!--首页模块卡片 手机2列-->
+        <div id="homePage" class="grid grid-cols-2 gap-3">
+            <div onclick="openForm('animalReceive')" class="module-card bg-white rounded-xl p-4 shadow-md cursor-pointer border border-gray-100">
+                <div class="text-primary text-2xl mb-2"><i class="fa fa-paw"></i></div>
+                <h2 class="text-base font-semibold text-gray-800">动物接收</h2>
+                <p class="text-neutral text-xs mt-1">传入验收登记</p>
+            </div>
+            <div onclick="openForm('personRecord')" class="module-card bg-white rounded-xl p-4 shadow-md cursor-pointer border border-gray-100">
+                <div class="text-primary text-2xl mb-2"><i class="fa fa-users"></i></div>
+                <h2 class="text-base font-semibold text-gray-800">人员进出</h2>
+                <p class="text-neutral text-xs mt-1">人员出入台账</p>
+            </div>
+            <div onclick="openForm('opRoom')" class="module-card bg-white rounded-xl p-4 shadow-md cursor-pointer border border-gray-100">
+                <div class="text-primary text-2xl mb-2"><i class="fa fa-flask"></i></div>
+                <h2 class="text-base font-semibold text-gray-800">操作室使用</h2>
+                <p class="text-neutral text-xs mt-1">操作室预约登记</p>
+            </div>
+            <div onclick="openForm('dissectRoom')" class="module-card bg-white rounded-xl p-4 shadow-md cursor-pointer border border-gray-100">
+                <div class="text-primary text-2xl mb-2"><i class="fa fa-scissors"></i></div>
+                <h2 class="text-base font-semibold text-gray-800">解剖室使用</h2>
+                <p class="text-neutral text-xs mt-1">解剖室预约台账</p>
+            </div>
+            <div onclick="openForm('carcass')" class="module-card bg-white rounded-xl p-4 shadow-md cursor-pointer border border-gray-100">
+                <div class="text-primary text-2xl mb-2"><i class="fa fa-archive"></i></div>
+                <h2 class="text-base font-semibold text-gray-800">尸体冻存</h2>
+                <p class="text-neutral text-xs mt-1">冻存登记</p>
+            </div>
+            <div onclick="openForm('roomLedger')" class="module-card bg-white rounded-xl p-4 shadow-md cursor-pointer border border-gray-100">
+                <div class="text-primary text-2xl mb-2"><i class="fa fa-list-alt"></i></div>
+                <h2 class="text-base font-semibold text-gray-800">饲养间台账</h2>
+                <p class="text-neutral text-xs mt-1">自动统计动物展示页</p>
+            </div>
+        </div>
+        <!--表单页面-->
+        <div id="formPage" class="hidden bg-white rounded-xl shadow-lg p-4 mt-4">
+            <button onclick="backHome()" class="mb-5 px-4 py-3 bg-gray-200 hover:bg-gray-300 rounded-lg transition text-gray-700 w-full text-base">
+                <i class="fa fa-arrow-left mr-1"></i>返回首页
+            </button>
+            <div id="formContent"></div>
+            <hr class="my-6 border-gray-200">
+            <div id="recordWrap">
+                <h3 class="text-base font-semibold text-gray-700 mb-3"><i class="fa fa-history mr-1"></i>历史记录</h3>
+                <div id="recordList" class="overflow-x-auto"></div>
+            </div>
+        </div>
+        <!--编辑弹窗容器-->
+        <div id="editModal" class="hidden modal-mask">
+            <div class="modal-box">
+                <h3 class="text-lg font-bold mb-4">编辑记录</h3>
+                <div id="editFormWrap"></div>
+            </div>
+        </div>
+    </div>
+    <script>
+        // ==========【部署后修改此处】你的Vercel部署后的API地址==========
+        const API_BASE = "/api";
+
+        async function apiGetData(){
+            const resp = await fetch(`${API_BASE}/get`);
+            return await resp.json();
+        }
+        async function apiSaveData(data){
+            await fetch(`${API_BASE}/save`,{
+                method:"POST",
+                headers:{"Content-Type":"application/json"},
+                body:JSON.stringify(data)
+            })
+        }
+        async function getData(){
+            return await apiGetData();
+        }
+        async function saveData(data){
+            await apiSaveData(data);
+        }
+
+        let currentType = '';
+        let editIndex = null;
+
+        const forms = {
+            animalReceive: {
+                title:"动物接收登记表",
+                fields:[
+                    {label:"负责人",name:"leader",type:"text"},
+                    {label:"试验名称",name:"testName",type:"text"},
+                    {label:"进入时间",name:"inTime",type:"datetime-local"},
+                    {
+                        label:"动物来源",
+                        name:"source",
+                        type:"checkboxCustom",
+                        options:["斯贝福（北京）生物技术有限公司"],
+                        customLabel:"其它："
+                    },
+                    {
+                        label:"品种品系",
+                        name:"strain",
+                        type:"checkboxCustom",
+                        options:["KM小鼠","C57BL/6J小鼠","BALB/c小鼠","裸鼠","SD大鼠","Wistar大鼠"],
+                        customLabel:"其他"
+                    },
+                    {label:"雄性数量",name:"maleNum",type:"number"},
+                    {label:"雌性数量",name:"femaleNum",type:"number"},
+                    {label:"饲养房间",name:"room",type:"checkbox",options:["小鼠饲养间1","小鼠饲养间2","大鼠饲养间1","大鼠饲养间2","豚鼠饲养间","隔离室"]},
+                    {label:"实验开始时间",name:"expStart",type:"datetime-local"},
+                    {label:"实验预期结束时间",name:"expExpectEnd",type:"datetime-local"},
+                    {label:"实验实际结束时间",name:"expRealEnd",type:"datetime-local"}
+                ]
+            },
+            personRecord: {
+                title:"人员进出记录",
+                fields:[
+                    {label:"日期",name:"date",type:"date"},
+                    {label:"人员",name:"person",type:"text"},
+                    {label:"事由",name:"reason",type:"text"},
+                    {label:"进入时间",name:"inTime",type:"time"},
+                    {label:"离开时间",name:"outTime",type:"time"}
+                ]
+            },
+            opRoom: {
+                title:"操作室预约登记",
+                fields:[
+                    {label:"预约日期",name:"date",type:"date"},
+                    {label:"预约开始时间",name:"startTime",type:"time"},
+                    {label:"预约结束时间",name:"endTime",type:"time"},
+                    {label:"使用人",name:"user",type:"text"},
+                    {label:"课题名称",name:"project",type:"text"},
+                    {label:"实验内容",name:"content",type:"textarea"}
+                ]
+            },
+            dissectRoom: {
+                title:"解剖室预约登记",
+                fields:[
+                    {label:"预约日期",name:"date",type:"date"},
+                    {label:"预约开始时间",name:"startTime",type:"time"},
+                    {label:"预约结束时间",name:"endTime",type:"time"},
+                    {label:"课题名称",name:"project",type:"text"},
+                    {label:"动物数量",name:"animalCount",type:"number"},
+                    {label:"负责人",name:"leader",type:"text"}
+                ]
+            },
+            carcass: {
+                title:"动物尸体冻存记录",
+                fields:[
+                    {label:"日期",name:"date",type:"date"},
+                    {label:"冻存数量",name:"count",type:"number"},
+                    {label:"原因",name:"reason",type:"text"},
+                    {label:"使用人",name:"user",type:"text"}
+                ]
+            },
+            roomLedger: {
+                title:"各饲养间动物台账",
+                isDisplayOnly:true
+            }
+        };
+
+        async function checkRoomConflict(type, newItem, skipIdx=null){
+            const allData = await getData();
+            const list = allData[type];
+            const date = newItem.date;
+            const sTime = newItem.startTime;
+            const eTime = newItem.endTime;
+            if(!date || !sTime || !eTime) return false;
+
+            const newStart = new Date(`${date}T${sTime}`).getTime();
+            const newEnd = new Date(`${date}T${eTime}`).getTime();
+            if(newStart >= newEnd){
+                alert("⚠️结束时间必须晚于开始时间！");
+                return true;
+            }
+            for(let i=0;i<list.length;i++){
+                if(skipIdx === i) continue;
+                const row = list[i];
+                if(row.date !== date) continue;
+                const rS = new Date(`${row.date}T${row.startTime}`).getTime();
+                const rE = new Date(`${row.date}T${row.endTime}`).getTime();
+                if(!(newEnd <= rS || newStart >= rE)){
+                    alert(`⚠️预约时间冲突！\n已有预约：${row.startTime} ~ ${row.endTime}`);
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        async function calcAllRoomLedger(){
+            const allData = await getData();
+            const receiveList = allData.animalReceive;
+            const roomList = ["小鼠饲养间1","小鼠饲养间2","大鼠饲养间1","大鼠饲养间2","豚鼠饲养间","隔离室"];
+            const result = [];
+            for(let room of roomList){
+                const roomRecs = receiveList.filter(r=>Array.isArray(r.room) && r.room.includes(room));
+                let mouseTotal = 0;
+                let ratTotal = 0;
+                let testInfos = [];
+                for(let rec of roomRecs){
+                    const male = Number(rec.maleNum||0);
+                    const female = Number(rec.femaleNum||0);
+                    const total = male+female;
+                    const strainArr = Array.isArray(rec.strain)?rec.strain:[];
+                    const isMouse = strainArr.some(s=>s.includes("小鼠")||s.includes("裸鼠"));
+                    const isRat = strainArr.some(s=>s.includes("大鼠"));
+                    if(isMouse) mouseTotal += total;
+                    if(isRat) ratTotal += total;
+                    if(rec.testName){
+                        let cycleText = "";
+                        if(rec.expStart) cycleText += rec.expStart;
+                        if(rec.expExpectEnd) cycleText += " ~ "+rec.expExpectEnd;
+                        testInfos.push({name:rec.testName, cycle:cycleText||"未填写周期"})
+                    }
+                }
+                result.push({room,testInfos,mouseNum:mouseTotal,ratNum:ratTotal})
+            }
+            return result;
+        }
+
+        async function openForm(type){
+            currentType = type;
+            editIndex = null;
+            document.getElementById("homePage").classList.add("hidden");
+            document.getElementById("formPage").classList.remove("hidden");
+            await renderForm();
+            await renderRecords();
+        }
+        function backHome(){
+            document.getElementById("formPage").classList.add("hidden");
+            document.getElementById("homePage").classList.remove("hidden");
+        }
+        async function renderForm(){
+            const form = forms[currentType];
+            const recordWrap = document.getElementById("recordWrap");
+            if(form.isDisplayOnly){
+                recordWrap.style.display = "none";
+                const ledgerData = await calcAllRoomLedger();
+                let html = `<h2 class="text-lg font-bold text-gray-800 mb-5">${form.title}</h2>
+                <div class="overflow-x-auto">
+                <table class="w-full border-collapse text-sm">
+                    <thead>
+                        <tr class="bg-[#E8F3FF]">
+                            <th class="border border-gray-200 px-2 py-2 text-left">房间</th>
+                            <th class="border border-gray-200 px-2 py-2 text-left">试验</th>
+                            <th class="border border-gray-200 px-2 py-2 text-left">大鼠数</th>
+                            <th class="border border-gray-200 px-2 py-2 text-left">小鼠数</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+                for(let item of ledgerData){
+                    let testStr = item.testInfos.length===0?"<span class='text-neutral'>暂无试验</span>":item.testInfos.map(t=>`${t.name}｜${t.cycle}`).join("<br/>");
+                    html += `<tr class="hover:bg-gray-50">
+                        <td class="border border-gray-200 px-2 py-2">${item.room}</td>
+                        <td class="border border-gray-200 px-2 py-2">${testStr}</td>
+                        <td class="border border-gray-200 px-2 py-2">${item.ratNum}</td>
+                        <td class="border border-gray-200 px-2 py-2">${item.mouseNum}</td>
+                    </tr>`;
+                }
+                html += `</tbody></table></div>`;
+                document.getElementById("formContent").innerHTML = html;
+                return;
+            }
+            recordWrap.style.display = "block";
+            let html = `<h2 class="text-lg font-bold text-gray-800 mb-4">${form.title}</h2>
+            <form id="myForm" class="grid grid-cols-1 gap-y-4">`;
+            form.fields.forEach(f=> html += renderFieldHtml(f));
+            html += `<div class="pt-2">
+                <button type="submit" class="w-full py-3 bg-primary hover:bg-[#0E42D2] text-white rounded-lg shadow text-base">
+                    <i class="fa fa-save mr-1"></i>提交保存
+                </button>
+            </div></form>`;
+            document.getElementById("formContent").innerHTML = html;
+            document.getElementById("myForm").onsubmit = submitForm;
+        }
+
+        function renderFieldHtml(f){
+            let html = "";
+            if(f.type==='checkbox'){
+                html += `<div><label class="block font-medium text-gray-700 mb-2">${f.label}</label>`;
+                f.options.forEach(opt=>{
+                    html += `
+                    <div class="custom-checkbox-item">
+                        <input type="checkbox" name="${f.name}" value="${opt}" id="${f.name}_${opt}">
+                        <label for="${f.name}_${opt}" class="text-gray-600">${opt}</label>
+                    </div>`;
+                })
+                html += `</div>`;
+            }else if(f.type === 'checkboxCustom'){
+                html += `<div>
+                    <label class="block font-medium text-gray-700 mb-2">${f.label}</label>`;
+                f.options.forEach(opt=>{
+                    html += `
+                    <div class="custom-checkbox-item">
+                        <input type="checkbox" name="${f.name}" value="${opt}" id="${f.name}_${opt}">
+                        <label for="${f.name}_${opt}" class="text-gray-600">${opt}</label>
+                    </div>`;
+                })
+                const cbid = f.name + "_customCb";
+                const inputid = f.name + "_customInput";
+                html += `
+                <div class="custom-checkbox-item">
+                    <input type="checkbox" id="${cbid}" onchange="toggleCustomInput('${cbid}','${inputid}')">
+                    <label for="${cbid}" class="text-gray-600">${f.customLabel}</label>
+                </div>
+                <div id="${inputid}_wrap" class="pl-8 hidden">
+                    <input type="text" id="${inputid}" placeholder="手动填写" class="border border-gray-300 rounded-lg w-full p-2.5 mt-1">
+                </div>
+                </div>`;
+            }else if(f.type==='textarea'){
+                html += `<div>
+                    <label class="block font-medium text-gray-700 mb-2">${f.label}</label>
+                    <textarea name="${f.name}" class="border border-gray-300 rounded-lg w-full p-3 resize-y min-h-[80px]"></textarea>
+                </div>`;
+            }else{
+                html += `<div>
+                    <label class="block font-medium text-gray-700 mb-2">${f.label}</label>
+                    <input type="${f.type}" name="${f.name}" class="border border-gray-300 rounded-lg w-full p-3">
+                </div>`;
+            }
+            return html;
+        }
+
+        function toggleCustomInput(cbId,inputId){
+            const cb = document.getElementById(cbId);
+            const wrap = document.getElementById(inputId+"_wrap");
+            wrap.classList.toggle('hidden',!cb.checked);
+        }
+
+        function collectFormData(formData, type){
+            const dataObj = {};
+            const formCfg = forms[type];
+            formCfg.fields.forEach(f=>{
+                if(f.type === "checkbox"){
+                    let arr = [];
+                    formData.getAll(f.name).forEach(v=>arr.push(v));
+                    dataObj[f.name] = arr;
+                }else if(f.type === "checkboxCustom"){
+                    let arr = [];
+                    formData.getAll(f.name).forEach(v=>arr.push(v));
+                    const cbid = f.name + "_customCb";
+                    const inputid = f.name + "_customInput";
+                    const cbEl = document.getElementById(cbid);
+                    const inEl = document.getElementById(inputid);
+                    if(cbEl&&cbEl.checked && inEl&&inEl.value.trim()) arr.push(inEl.value.trim());
+                    dataObj[f.name] = arr;
+                }else{
+                    dataObj[f.name] = formData.get(f.name)??"";
+                }
+            })
+            return dataObj;
+        }
+
+        async function submitForm(e){
+            e.preventDefault();
+            const form = e.target;
+            const formData = new FormData(form);
+            const dataObj = collectFormData(formData, currentType);
+
+            if(currentType === 'opRoom' || currentType === 'dissectRoom'){
+                const hasConflict = await checkRoomConflict(currentType, dataObj, editIndex);
+                if(hasConflict) return;
+            }
+            const allData = await getData();
+            if(editIndex !== null){
+                allData[currentType][editIndex] = dataObj;
+                alert("✅编辑保存成功！");
+                editIndex = null;
+                closeEditModal();
+            }else{
+                allData[currentType].push(dataObj);
+                alert("✅保存成功！");
+            }
+            await saveData(allData);
+            form.reset();
+            await renderRecords();
+        }
+
+        async function renderRecords(){
+            const formCfg = forms[currentType];
+            if(formCfg.isDisplayOnly) return;
+            const allData = await getData();
+            const list = allData[currentType];
+            if(list.length===0){
+                document.getElementById("recordList").innerHTML = '<div class="py-8 text-center text-neutral"><i class="fa fa-file-text-o text-3xl mb-2"></i><p>暂无登记记录</p></div>';
+                return;
+            }
+            let tableHtml = `<div class="overflow-x-auto"><table class="w-full border-collapse text-sm">
+                <thead><tr class="bg-[#E8F3FF]">`;
+            formCfg.fields.forEach(f=>{
+                tableHtml += `<th class="border border-gray-200 px-1 py-2 text-left whitespace-nowrap">${f.label}</th>`;
+            })
+            tableHtml += `<th class="border border-gray-200 px-1 py-2 text-center whitespace-nowrap">操作</th></tr></thead><tbody>`;
+            list.forEach((item,idx)=>{
+                tableHtml += `<tr class="hover:bg-gray-50">`;
+                formCfg.fields.forEach(f=>{
+                    let val = item[f.name];
+                    if(Array.isArray(val)) val = val.join("；");
+                    tableHtml += `<td class="border border-gray-200 px-1 py-2 whitespace-nowrap">${val||''}</td>`;
+                })
+                tableHtml += `<td class="border border-gray-200 px-1 py-2 text-center">
+                    <button onclick="editRecord(${idx})" class="px-2 py-1.5 bg-primary text-white rounded text-xs">编辑</button>
+                    <button onclick="delRecord(${idx})" class="px-2 py-1.5 bg-danger text-white rounded text-xs ml-1">删除</button>
+                </td></tr>`;
+            })
+            tableHtml += `</tbody></table></div>`;
+            document.getElementById("recordList").innerHTML = tableHtml;
+        }
+
+        async function editRecord(idx){
+            const allData = await getData();
+            editIndex = idx;
+            const rowData = allData[currentType][idx];
+            const formCfg = forms[currentType];
+            const modal = document.getElementById("editModal");
+            const wrap = document.getElementById("editFormWrap");
+            let html = `<form id="editForm" class="grid grid-cols-1 gap-y-3">`;
+            formCfg.fields.forEach(f=> html += renderFieldHtml(f));
+            html += `
+            <div class="flex gap-3 pt-2">
+                <button type="submit" class="flex-1 py-2.5 bg-primary text-white rounded-lg">保存修改</button>
+                <button type="button" onclick="closeEditModal()" class="flex-1 py-2.5 bg-gray-300 rounded-lg">取消</button>
+            </div>
+            </form>`;
+            wrap.innerHTML = html;
+            modal.classList.remove("hidden");
+            fillFormData(document.getElementById("editForm"), rowData, formCfg);
+
+            document.getElementById("editForm").onsubmit = async function(e){
+                e.preventDefault();
+                const fd = new FormData(e.target);
+                const dataObj = collectFormData(fd, currentType);
+                if(currentType === 'opRoom' || currentType === 'dissectRoom'){
+                    const conflict = await checkRoomConflict(currentType, dataObj, editIndex);
+                    if(conflict) return;
+                }
+                const ad = await getData();
+                ad[currentType][editIndex] = dataObj;
+                await saveData(ad);
+                alert("✅编辑已保存");
+                closeEditModal();
+                await renderRecords();
+            }
+        }
+
+        function closeEditModal(){
+            editIndex = null;
+            document.getElementById("editModal").classList.add("hidden");
+        }
+
+        function fillFormData(formDom, row, formCfg){
+            formCfg.fields.forEach(f=>{
+                const val = row[f.name];
+                if(f.type === 'checkbox'){
+                    const arr = Array.isArray(val) ? val : [];
+                    f.options.forEach(opt=>{
+                        const inp = formDom.querySelector(`input[name="${f.name}"][value="${opt}"]`);
+                        if(inp) inp.checked = arr.includes(opt);
+                    })
+                }else if(f.type === 'checkboxCustom'){
+                    const arr = Array.isArray(val) ? val : [];
+                    f.options.forEach(opt=>{
+                        const inp = formDom.querySelector(`input[name="${f.name}"][value="${opt}"]`);
+                        if(inp) inp.checked = arr.includes(opt);
+                    })
+                    const customVals = arr.filter(x=>!f.options.includes(x));
+                    const cbid = f.name + "_customCb";
+                    const inputid = f.name + "_customInput";
+                    const cbEl = formDom.querySelector(`#${cbid}`);
+                    const inputEl = formDom.querySelector(`#${inputid}`);
+                    const wrapEl = formDom.querySelector(`#${inputid}_wrap`);
+                    if(customVals.length>0){
+                        cbEl.checked = true; wrapEl.classList.remove("hidden");
+                        inputEl.value = customVals.join("；");
+                    }else{
+                        cbEl.checked = false; wrapEl.classList.add("hidden"); inputEl.value = "";
+                    }
+                }else{
+                    const inp = formDom.querySelector(`[name="${f.name}"]`);
+                    if(inp) inp.value = val || "";
+                }
+            })
+        }
+
+        async function delRecord(index){
+            if(!confirm("确定删除该条记录？删除后不可恢复！")) return;
+            const allData = await getData();
+            allData[currentType].splice(index,1);
+            await saveData(allData);
+            await renderRecords();
+        }
+    </script>
+</body>
+</html>
